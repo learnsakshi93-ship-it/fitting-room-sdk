@@ -2,15 +2,32 @@
 
 This Android library adds a retailer-app client for a retailer-owned server route. The route should validate the signed-in shopper and forward the request to the Fitting Room service. Do not ship AI credentials in an Android package.
 
-## Add the module
+## Get the source and add the module
 
-Include `lib/try-on-sdk-android` in the retailer app's Gradle settings, then add:
+Download or clone the `fitting-room-sdk` repository. In the retailer app's `settings.gradle.kts`, include the SDK module. Adjust the relative path to match where you downloaded the repository:
+
+```kotlin
+include(":fitting-room-sdk")
+project(":fitting-room-sdk").projectDir =
+    file("../fitting-room-sdk/android-sdk/fitting-room-sdk")
+```
+
+Then add the dependency in the retailer app's module-level `build.gradle.kts`:
 
 ```kotlin
 implementation(project(":fitting-room-sdk"))
 ```
 
-## Call the SDK
+The module requires Android `minSdk` 23 or newer.
+
+## Add the try-on action
+
+1. In your app, let the shopper choose two PNG images and ask for consent.
+2. Implement a retailer-owned HTTPS endpoint, for example `https://shop.example/api/try-on`. Authenticate the shopper and forward requests to the Fitting Room API on your server.
+3. Create a client using your endpoint and the retailer's session token.
+4. Call `tryOn`, then decode and show the returned preview or display a retryable error.
+
+Example:
 
 ```kotlin
 val client = TryOnClient(
@@ -31,4 +48,6 @@ client.tryOn(
 }
 ```
 
-The client expects PNG byte arrays no larger than 4 MB each. Image selection, photo consent, and image editing remain under the retailer app's control.
+Use one of `TryOnCategory.CLOTHING`, `TryOnCategory.SHOES`, or `TryOnCategory.JEWELRY`. Each prepared PNG must be no larger than 4 MB. Image selection, photo consent, and image editing remain under the retailer app's control.
+
+The SDK runs the network request off the main thread and invokes the callback on the main thread. Call `client.shutdown()` when the client is no longer needed. Never place AI credentials in the Android app.
