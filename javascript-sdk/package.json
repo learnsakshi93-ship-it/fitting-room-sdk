@@ -1,0 +1,19 @@
+{
+  "name": "@workspace/fitting-room-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "JavaScript client SDK for embedding Fitting Room try-on into retailer sites",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": ["src", "README.md"],
+  "scripts": {
+    "test": "node --test"
+  }
+}
