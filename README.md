@@ -1,13 +1,24 @@
 # Fitting Room SDKs
 
-Standalone JavaScript and Android client SDKs for adding a retailer-owned virtual try-on flow. This repository contains SDK code and usage documentation only; it does not include the Fitting Room app or API server.
+JavaScript and Android client SDKs for adding a virtual try-on action to a retailer's own app. This repository contains SDK source and usage guides only; it does not contain the Fitting Room app or API server.
 
-## Packages
+## Quick start
 
-- [JavaScript SDK](javascript-sdk/README.md)
-- [Android SDK](android-sdk/README.md)
+1. Clone or download this repository.
+2. Choose the JavaScript guide for a web storefront or the Android guide for a native Android app.
+3. Add a retailer-owned HTTPS server route, such as `/api/try-on`. The route must authenticate the shopper, validate consent and images, and forward the request to the Fitting Room API.
+4. In the retailer app, let the shopper choose their photos, call the SDK, and display the generated preview.
 
-Both clients send prepared person and product images to a retailer-owned HTTPS route. The retailer server is responsible for shopper authentication, consent, validation, and forwarding the request to the Fitting Room API. Never place AI credentials in client apps or browser bundles.
+## Choose an SDK
+
+- [JavaScript SDK guide](javascript-sdk/README.md): install the local package and call `FittingRoomClient.tryOnFiles` with browser files.
+- [Android SDK guide](android-sdk/README.md): add the Gradle module and call `TryOnClient` with prepared PNG byte arrays.
+
+## Retailer server contract
+
+The SDK clients call the retailer's route. It accepts JSON containing `personImage`, `productImage`, and `category` (`clothing`, `shoes`, or `jewelry`). Return JSON with the generated PNG as base64 in `image`, the matching `category`, and an optional `disclaimer`.
+
+The retailer server owns authentication, rate limits, consent validation, and the call to the Fitting Room API. Never place an AI key or partner secret in browser code or a mobile package.
 
 ## License
 
