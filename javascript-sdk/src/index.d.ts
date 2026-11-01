@@ -1,10 +1,17 @@
-export type TryOnCategory = 'clothing' | 'shoes' | 'jewelry';
+export type ProductCategory = 'clothing' | 'shoes' | 'jewelry';
+export type TryOnCategory = ProductCategory | 'full-look';
 
-export interface TryOnRequest {
+export type TryOnRequest = {
   personImage: string;
   productImage: string;
-  category: TryOnCategory;
-}
+  productImages?: never;
+  category: ProductCategory;
+} | {
+  personImage: string;
+  productImage?: never;
+  category: 'full-look';
+  productImages: Record<ProductCategory, string>;
+};
 
 export interface TryOnResult {
   image: string;
@@ -26,7 +33,19 @@ export class FittingRoomClient {
   tryOnFiles(request: {
     personFile: Blob;
     productFile: Blob;
-    category: TryOnCategory;
+    category: ProductCategory;
+  }): Promise<TryOnResult>;
+  tryOnFullLook(request: {
+    personImage: string;
+    clothingImage: string;
+    shoesImage: string;
+    jewelryImage: string;
+  }): Promise<TryOnResult>;
+  tryOnFullLookFiles(request: {
+    personFile: Blob;
+    clothingFile: Blob;
+    shoesFile: Blob;
+    jewelryFile: Blob;
   }): Promise<TryOnResult>;
 }
 

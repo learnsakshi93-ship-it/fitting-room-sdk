@@ -20,6 +20,34 @@ implementation(project(":fitting-room-sdk"))
 
 The module requires Android `minSdk` 23 or newer.
 
+## Full look (clothing + shoes + jewelry)
+
+Use a full-body person photo showing the feet and relevant jewelry area, then
+provide all three product references as separate prepared PNG byte arrays:
+
+```kotlin
+client.tryOnFullLook(
+    personPng = preparedPersonPng,
+    clothingPng = preparedClothingPng,
+    shoesPng = preparedShoesPng,
+    jewelryPng = preparedJewelryPng,
+) { result ->
+    result.onSuccess { preview ->
+        // Decode preview.imageBase64 and display one complete-look preview.
+    }.onFailure { error ->
+        // Display error.message and allow retry.
+    }
+}
+```
+
+The result category is `TryOnCategory.FULL_LOOK`. Do not pass this category to
+the two-image `tryOn` method. The request uses `category: "full-look"` and
+`productImages: { clothing, shoes, jewelry }` instead of `productImage`.
+Update and deploy the backend first. Ensure the retailer proxy preserves all
+four image inputs and supports 24 MB JSON requests; keep service credentials
+server-side. Update the SDK dependency and rebuild your Android integration to
+expose this new method. Existing single-category requests remain unchanged.
+
 ## Add the try-on action
 
 1. In your app, let the shopper choose two PNG images and ask for consent.

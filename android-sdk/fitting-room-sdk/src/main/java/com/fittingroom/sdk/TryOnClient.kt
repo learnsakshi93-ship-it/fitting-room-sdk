@@ -12,6 +12,7 @@ enum class TryOnCategory(val wireValue: String) {
     CLOTHING("clothing"),
     SHOES("shoes"),
     JEWELRY("jewelry"),
+    FULL_LOOK("full-look"),
 }
 
 data class TryOnResult(
@@ -46,6 +47,7 @@ class TryOnClient(
     ) {
         executor.execute {
             val result = runCatching {
+                require(category != TryOnCategory.FULL_LOOK) { "Use tryOnFullLook with all three product photos." }
                 require(personPng.isNotEmpty() && productPng.isNotEmpty()) {
                     "Both person and product PNG images are required."
                 }
@@ -64,10 +66,36 @@ class TryOnClient(
         }
     }
 
+    fun tryOnFullLook(
+        personPng: ByteArray,
+        clothingPng: ByteArray,
+        shoesPng: ByteArray,
+        jewelryPng: ByteArray,
+        callback: (Result<TryOnResult>) -> Unit,
+    ) {
+        executor.execute {
+            val result = runCatching {
+                val images = listOf(personPng, clothingPng, shoesPng, jewelryPng)
+                require(images.all { it.isNotEmpty() && it.size <= 3_900_000 }) {
+                    "Provide a person PNG and clothing, shoes, and jewelry PNGs, each within the service image limit."
+                }
+                val encoded = images.map { Base64.encodeToString(it, Base64.NO_WRAP) }
+                sendRequest(
+                    encoded[0], null, TryOnCategory.FULL_LOOK,
+                    JSONObject().put("clothing", encoded[1]).put("shoes", encoded[2]).put("jewelry", encoded[3]),
+                )
+            }.recoverCatching { error ->
+                throw TryOnException(error.message ?: "Full-look request failed.", error)
+            }
+            mainHandler.post { callback(result) }
+        }
+    }
+
     private fun sendRequest(
         personImage: String,
-        productImage: String,
+        productImage: String?,
         category: TryOnCategory,
+        productImages: JSONObject? = null,
     ): TryOnResult {
         val connection = URL(retailerEndpoint).openConnection() as HttpURLConnection
         try {
@@ -80,11 +108,12 @@ class TryOnClient(
                 connection.setRequestProperty("Authorization", "Bearer $it")
             }
 
-            val payload = JSONObject()
+            val payloadJson = JSONObject()
                 .put("personImage", personImage)
-                .put("productImage", productImage)
                 .put("category", category.wireValue)
-                .toString()
+            if (productImage != null) payloadJson.put("productImage", productImage)
+            if (productImages != null) payloadJson.put("productImages", productImages)
+            val payload = payloadJson.toString()
             connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
 
             val status = connection.responseCode
@@ -98,6 +127,9 @@ class TryOnClient(
             }
             val image = json.optString("image")
             if (image.isBlank()) throw TryOnException("The try-on response did not include an image.")
+            if (json.optString("category") != category.wireValue) {
+                throw TryOnException("The try-on response did not match the requested category.")
+            }
             return TryOnResult(
                 imageBase64 = image,
                 category = category,

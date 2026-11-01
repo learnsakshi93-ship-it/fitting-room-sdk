@@ -1,4 +1,5 @@
-const CATEGORIES = new Set(['clothing', 'shoes', 'jewelry']);
+const PRODUCT_CATEGORIES = ['clothing', 'shoes', 'jewelry'];
+const CATEGORIES = new Set([...PRODUCT_CATEGORIES, 'full-look']);
 
 export class FittingRoomClient {
   constructor({ endpoint, getAccessToken, fetchImpl = globalThis.fetch } = {}) {
@@ -13,14 +14,22 @@ export class FittingRoomClient {
     this.fetchImpl = fetchImpl;
   }
 
-  async tryOn({ personImage, productImage, category }) {
+  async tryOn({ personImage, productImage, productImages, category }) {
     if (!CATEGORIES.has(category)) {
-      throw new Error('Category must be clothing, shoes, or jewelry.');
+      throw new Error('Category must be clothing, shoes, jewelry, or full-look.');
     }
-    if (typeof personImage !== 'string' || typeof productImage !== 'string') {
-      throw new Error('Provide both images as base64-encoded PNG data without data URL prefixes.');
+    const fullLook = category === 'full-look';
+    if (fullLook ? (!productImages || productImage !== undefined) : productImages !== undefined) {
+      throw new Error('Full look requires separate clothing, shoes, and jewelry references; single categories use productImage.');
     }
-    if (personImage.length > 5_300_000 || productImage.length > 5_300_000) {
+    const products = fullLook
+      ? Object.fromEntries(PRODUCT_CATEGORIES.map((key) => [key, productImages[key]]))
+      : undefined;
+    const images = [personImage, ...(fullLook ? Object.values(products) : [productImage])];
+    if (images.some((image) => typeof image !== 'string' || !image.length)) {
+      throw new Error('Provide the person photo and every product photo as base64-encoded PNG data without data URL prefixes.');
+    }
+    if (images.some((image) => image.length > 5_300_000)) {
       throw new Error('Each prepared image must be 4 MB or smaller.');
     }
 
@@ -31,7 +40,9 @@ export class FittingRoomClient {
     const response = await this.fetchImpl(this.endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ personImage, productImage, category }),
+      body: JSON.stringify(fullLook
+        ? { personImage, productImages: products, category }
+        : { personImage, productImage, category }),
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -44,11 +55,28 @@ export class FittingRoomClient {
   }
 
   async tryOnFiles({ personFile, productFile, category }) {
+    if (category === 'full-look') {
+      throw new Error('Use tryOnFullLookFiles for a full look.');
+    }
     const [personImage, productImage] = await Promise.all([
       imageFileToPngBase64(personFile),
       imageFileToPngBase64(productFile),
     ]);
     return this.tryOn({ personImage, productImage, category });
+  }
+
+  async tryOnFullLook({ personImage, clothingImage, shoesImage, jewelryImage }) {
+    return this.tryOn({
+      personImage, category: 'full-look',
+      productImages: { clothing: clothingImage, shoes: shoesImage, jewelry: jewelryImage },
+    });
+  }
+
+  async tryOnFullLookFiles({ personFile, clothingFile, shoesFile, jewelryFile }) {
+    const [personImage, clothingImage, shoesImage, jewelryImage] = await Promise.all(
+      [personFile, clothingFile, shoesFile, jewelryFile].map(imageFileToPngBase64),
+    );
+    return this.tryOnFullLook({ personImage, clothingImage, shoesImage, jewelryImage });
   }
 }
 
