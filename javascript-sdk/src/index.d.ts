@@ -1,5 +1,13 @@
 export type ProductCategory = 'clothing' | 'shoes' | 'jewelry';
 export type TryOnCategory = ProductCategory | 'full-look';
+export type AtLeastOne<T extends Record<string, unknown>> =
+  Partial<T> & { [K in keyof T]-?: Required<Pick<T, K>> }[keyof T];
+export type FullLookProducts = AtLeastOne<Record<ProductCategory, string>>;
+export type FullLookFiles = AtLeastOne<{
+  clothingFile: Blob;
+  shoesFile: Blob;
+  jewelryFile: Blob;
+}>;
 
 export type TryOnRequest = {
   personImage: string;
@@ -10,7 +18,7 @@ export type TryOnRequest = {
   personImage: string;
   productImage?: never;
   category: 'full-look';
-  productImages: Record<ProductCategory, string>;
+  productImages: FullLookProducts;
 };
 
 export interface TryOnResult {
@@ -37,16 +45,10 @@ export class FittingRoomClient {
   }): Promise<TryOnResult>;
   tryOnFullLook(request: {
     personImage: string;
-    clothingImage: string;
-    shoesImage: string;
-    jewelryImage: string;
-  }): Promise<TryOnResult>;
+  } & FullLookProducts): Promise<TryOnResult>;
   tryOnFullLookFiles(request: {
     personFile: Blob;
-    clothingFile: Blob;
-    shoesFile: Blob;
-    jewelryFile: Blob;
-  }): Promise<TryOnResult>;
+  } & FullLookFiles): Promise<TryOnResult>;
 }
 
 export function imageFileToPngBase64(file: Blob): Promise<string>;

@@ -1,4 +1,4 @@
-# Fitting Room SDKs — 0.2.0
+# Fitting Room SDKs — 0.2.1
 
 JavaScript and Android client SDKs for adding virtual try-on to a retailer's own
 app. This repository contains SDK source and usage guides only. It does **not**
@@ -6,7 +6,7 @@ contain the standalone Fitting Room app, desktop application, or API server.
 
 ## Download
 
-Download the **Source code (zip)** from [release v0.2.0](https://github.com/learnsakshi93-ship-it/fitting-room-sdk/releases/tag/v0.2.0),
+Download the **Source code (zip)** from [release v0.2.1](https://github.com/learnsakshi93-ship-it/fitting-room-sdk/releases/tag/v0.2.1),
 or clone this repository. In this SDK repository, the source archive is the
 intended download. It is not a desktop installer.
 
@@ -19,11 +19,11 @@ intended download. It is not a desktop installer.
 3. Let the shopper select their photos, call the SDK, and display the returned preview.
 4. Keep all AI credentials and partner secrets on your server, never in the client.
 
-## New in 0.2.0: Full look
+## New in 0.2.1: Optional Full look pieces
 
-Generate one preview containing clothing, shoes, and jewelry together. Use one
-full-body person photo with the feet and relevant jewelry area visible, plus
-three separate product photos.
+Generate one preview using a person photo and any one, two, or all three separate
+clothing, shoe, and jewelry photos. Leave out categories the shopper does not want
+to try; at least one product photo is required.
 
 - JavaScript browser files: `client.tryOnFullLookFiles({ personFile, clothingFile, shoesFile, jewelryFile })`.
 - JavaScript prepared PNGs: `client.tryOnFullLook({ personImage, clothingImage, shoesImage, jewelryImage })`.
@@ -60,8 +60,9 @@ Full-look request:
 }
 ```
 
-Do not send `productImage` in full-look mode. All three product references are
-required. Each prepared image must fit the service limit; allow 24 MB JSON
+Do not send `productImage` in full-look mode. Send only the categories the shopper
+selected in `productImages`, with at least one category present. Each prepared
+image must fit the service limit; allow 24 MB JSON
 requests through the retailer's proxy. The backend must be updated before using
 Full look.
 

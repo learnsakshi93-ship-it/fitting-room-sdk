@@ -47,7 +47,7 @@ class TryOnClient(
     ) {
         executor.execute {
             val result = runCatching {
-                require(category != TryOnCategory.FULL_LOOK) { "Use tryOnFullLook with all three product photos." }
+                require(category != TryOnCategory.FULL_LOOK) { "Use tryOnFullLook with at least one product photo." }
                 require(personPng.isNotEmpty() && productPng.isNotEmpty()) {
                     "Both person and product PNG images are required."
                 }
@@ -68,21 +68,34 @@ class TryOnClient(
 
     fun tryOnFullLook(
         personPng: ByteArray,
-        clothingPng: ByteArray,
-        shoesPng: ByteArray,
-        jewelryPng: ByteArray,
+        clothingPng: ByteArray? = null,
+        shoesPng: ByteArray? = null,
+        jewelryPng: ByteArray? = null,
         callback: (Result<TryOnResult>) -> Unit,
     ) {
         executor.execute {
             val result = runCatching {
-                val images = listOf(personPng, clothingPng, shoesPng, jewelryPng)
-                require(images.all { it.isNotEmpty() && it.size <= 3_900_000 }) {
-                    "Provide a person PNG and clothing, shoes, and jewelry PNGs, each within the service image limit."
+                val selectedProducts = listOfNotNull(
+                    clothingPng?.let { "clothing" to it },
+                    shoesPng?.let { "shoes" to it },
+                    jewelryPng?.let { "jewelry" to it },
+                )
+                require(personPng.isNotEmpty() && personPng.size <= 3_900_000) {
+                    "Provide a person PNG small enough to stay within the service image limit."
                 }
-                val encoded = images.map { Base64.encodeToString(it, Base64.NO_WRAP) }
+                require(selectedProducts.isNotEmpty()) {
+                    "Add at least one clothing, shoe, or jewelry PNG for a full look."
+                }
+                require(selectedProducts.all { (_, image) -> image.isNotEmpty() && image.size <= 3_900_000 }) {
+                    "Each selected product PNG must be small enough to stay within the service image limit."
+                }
+                val encodedProducts = JSONObject()
+                selectedProducts.forEach { (category, image) ->
+                    encodedProducts.put(category, Base64.encodeToString(image, Base64.NO_WRAP))
+                }
                 sendRequest(
-                    encoded[0], null, TryOnCategory.FULL_LOOK,
-                    JSONObject().put("clothing", encoded[1]).put("shoes", encoded[2]).put("jewelry", encoded[3]),
+                    Base64.encodeToString(personPng, Base64.NO_WRAP), null, TryOnCategory.FULL_LOOK,
+                    encodedProducts,
                 )
             }.recoverCatching { error ->
                 throw TryOnException(error.message ?: "Full-look request failed.", error)

@@ -93,8 +93,11 @@ test('full look rejects missing, oversized, and ambiguous inputs before sending'
     fetchImpl: () => { throw new Error('fetch must not be called'); },
   });
   await assert.rejects(client.tryOnFullLook({
-    personImage: 'p', clothingImage: 'c', shoesImage: 's',
-  }), /every product/);
+    personImage: 'p',
+  }), /at least one/);
+  await assert.rejects(client.tryOn({
+    category: 'full-look', personImage: 'p', productImages: {},
+  }), /at least one/);
   await assert.rejects(client.tryOnFullLook({
     personImage: 'p', clothingImage: 'c', shoesImage: 's', jewelryImage: 'j'.repeat(5_300_001),
   }), /4 MB/);
@@ -102,6 +105,22 @@ test('full look rejects missing, oversized, and ambiguous inputs before sending'
     category: 'full-look', personImage: 'p', productImage: 'i',
     productImages: { clothing: 'c', shoes: 's', jewelry: 'j' },
   }), /separate/);
+});
+
+test('full look sends only selected products and accepts a two-piece look', async () => {
+  let payload;
+  const client = new FittingRoomClient({
+    endpoint: '/api/try-on',
+    fetchImpl: async (_url, options) => {
+      payload = JSON.parse(options.body);
+      return { ok: true, json: async () => ({ image: 'preview', category: 'full-look', disclaimer: 'Estimate.' }) };
+    },
+  });
+  await client.tryOnFullLook({ personImage: 'person', clothingImage: 'outfit', shoesImage: 'shoes' });
+  assert.deepEqual(payload, {
+    personImage: 'person', category: 'full-look',
+    productImages: { clothing: 'outfit', shoes: 'shoes' },
+  });
 });
 
 test('full look rejects a response for a different category', async () => {

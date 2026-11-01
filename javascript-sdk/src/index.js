@@ -20,11 +20,16 @@ export class FittingRoomClient {
     }
     const fullLook = category === 'full-look';
     if (fullLook ? (!productImages || productImage !== undefined) : productImages !== undefined) {
-      throw new Error('Full look requires separate clothing, shoes, and jewelry references; single categories use productImage.');
+      throw new Error('Full look requires one or more separate product references; single categories use productImage.');
     }
     const products = fullLook
-      ? Object.fromEntries(PRODUCT_CATEGORIES.map((key) => [key, productImages[key]]))
+      ? Object.fromEntries(PRODUCT_CATEGORIES
+        .filter((key) => productImages[key] !== undefined)
+        .map((key) => [key, productImages[key]]))
       : undefined;
+    if (fullLook && Object.keys(products).length === 0) {
+      throw new Error('Add at least one clothing, shoe, or jewelry image for a full look.');
+    }
     const images = [personImage, ...(fullLook ? Object.values(products) : [productImage])];
     if (images.some((image) => typeof image !== 'string' || !image.length)) {
       throw new Error('Provide the person photo and every product photo as base64-encoded PNG data without data URL prefixes.');
@@ -73,10 +78,16 @@ export class FittingRoomClient {
   }
 
   async tryOnFullLookFiles({ personFile, clothingFile, shoesFile, jewelryFile }) {
-    const [personImage, clothingImage, shoesImage, jewelryImage] = await Promise.all(
-      [personFile, clothingFile, shoesFile, jewelryFile].map(imageFileToPngBase64),
-    );
-    return this.tryOnFullLook({ personImage, clothingImage, shoesImage, jewelryImage });
+    const entries = Object.entries({ clothingImage: clothingFile, shoesImage: shoesFile, jewelryImage: jewelryFile })
+      .filter((entry) => entry[1] !== undefined);
+    const [personImage, ...encodedProducts] = await Promise.all([
+      imageFileToPngBase64(personFile),
+      ...entries.map(([, file]) => imageFileToPngBase64(file)),
+    ]);
+    return this.tryOnFullLook({
+      personImage,
+      ...Object.fromEntries(entries.map(([key], index) => [key, encodedProducts[index]])),
+    });
   }
 }
 

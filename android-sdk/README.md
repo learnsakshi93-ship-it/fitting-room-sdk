@@ -22,15 +22,15 @@ The module requires Android `minSdk` 23 or newer.
 
 ## Full look (clothing + shoes + jewelry)
 
-Use a full-body person photo showing the feet and relevant jewelry area, then
-provide all three product references as separate prepared PNG byte arrays:
+Use a person photo and provide any one, two, or all three separate product
+references as prepared PNG byte arrays. At least one product is required:
 
 ```kotlin
 client.tryOnFullLook(
     personPng = preparedPersonPng,
     clothingPng = preparedClothingPng,
     shoesPng = preparedShoesPng,
-    jewelryPng = preparedJewelryPng,
+    // Omit jewelryPng when it is not part of this look.
 ) { result ->
     result.onSuccess { preview ->
         // Decode preview.imageBase64 and display one complete-look preview.
@@ -40,11 +40,12 @@ client.tryOnFullLook(
 }
 ```
 
-The result category is `TryOnCategory.FULL_LOOK`. Do not pass this category to
-the two-image `tryOn` method. The request uses `category: "full-look"` and
-`productImages: { clothing, shoes, jewelry }` instead of `productImage`.
-Update and deploy the backend first. Ensure the retailer proxy preserves all
-four image inputs and supports 24 MB JSON requests; keep service credentials
+Each product argument is optional and defaults to `null`. Omit categories that
+are not part of the look. The result category is `TryOnCategory.FULL_LOOK`; do
+not pass this category to the two-image `tryOn` method. The request uses
+`category: "full-look"` and includes only supplied categories in `productImages`.
+Update and deploy the backend first. Ensure the retailer proxy preserves the
+selected product images and supports 24 MB JSON requests; keep service credentials
 server-side. Update the SDK dependency and rebuild your Android integration to
 expose this new method. Existing single-category requests remain unchanged.
 

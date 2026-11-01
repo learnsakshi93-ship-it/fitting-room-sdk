@@ -42,24 +42,25 @@ The original image files must be smaller than 25 MB. The SDK scales and converts
 
 ## Try the full look
 
-Use one full-body person photo with the feet and relevant jewelry area visible,
-plus a separate clothing photo, shoe photo, and jewelry photo. All four references
-are sent in one request to generate one combined preview:
+Use a person photo, plus **any one, two, or all three** separate clothing, shoe,
+and jewelry photos. Only the product photos you provide are sent in one request
+to generate one combined preview. At least one product photo is required:
 
 ```js
 const result = await client.tryOnFullLookFiles({
   personFile,
   clothingFile,
   shoesFile,
-  jewelryFile,
+  // jewelryFile is optional
 });
 setPreview(`data:image/png;base64,${result.image}`);
 ```
 
 For already prepared PNG base64 strings, use
 `client.tryOnFullLook({ personImage, clothingImage, shoesImage, jewelryImage })`.
+Omit the product image properties for categories you are not trying.
 The wire request has `category: 'full-look'`, `personImage`, and
-`productImages: { clothing, shoes, jewelry }` instead of `productImage`.
+`productImages` containing only the supplied categories instead of `productImage`.
 Your retailer server must forward this complete payload without dropping fields,
 and allow at least 24 MB JSON requests. Service credentials must remain on the server.
 Deploy an updated Fitting Room backend before using this new mode.
