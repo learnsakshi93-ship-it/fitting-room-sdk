@@ -67,6 +67,45 @@ Deploy an updated Fitting Room backend before using this new mode.
 Existing single-category calls are unchanged. Results remain visual estimates,
 not guarantees of fit or exact product details.
 
+## Product variants and “Shop this look”
+
+Your retailer app owns the product catalog and variant picker. When a shopper
+chooses a color or size, send the matching product image to the SDK; after a
+successful preview, keep the selected SKU's product URL beside the result:
+
+```js
+const result = await client.tryOnFiles({
+  personFile,
+  productFile: selectedVariantImage,
+  category: 'clothing',
+  productName: 'Linen day dress',
+  productUrl: selectedVariantUrl,
+  variant: 'Rose',
+});
+
+setPreview(`data:image/png;base64,${result.image}`);
+setShopLinks(result.shopLinks);
+```
+
+For a full look, pass links only for the selected pieces:
+
+```js
+const result = await client.tryOnFullLookFiles({
+  personFile,
+  clothingFile,
+  shoesFile,
+  productDetails: {
+    clothing: { name: 'Linen dress', url: dressUrl, variant: 'Sage' },
+    shoes: { name: 'Everyday sneaker', url: sneakerUrl, variant: 'White' },
+  },
+});
+```
+
+The SDK returns those links locally as `result.shopLinks`; product metadata is
+not sent to the AI endpoint. Use the returned links for a “Shop this look” row.
+Product URLs must be HTTPS. Product-image uploads and screenshots remain
+supported in the standalone app.
+
 The endpoint accepts JSON fields `personImage`, `productImage`, and `category`. Return JSON with an `image` base64 PNG and the matching `category`; a `disclaimer` can also be included.
 
 The SDK does not include the retailer's photo picker, consent UI, or server endpoint. Keep AI credentials on the retailer's server; never place them in browser code.
