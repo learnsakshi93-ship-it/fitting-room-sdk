@@ -49,6 +49,37 @@ selected product images and supports 24 MB JSON requests; keep service credentia
 server-side. Update the SDK dependency and rebuild your Android integration to
 expose this new method. Existing single-category requests remain unchanged.
 
+## Product variants and “Shop this look”
+
+The retailer owns its catalog and variant picker. For a selected color, pass
+that variant's product image and HTTPS product URL to the SDK. The result
+contains the retailer link locally; product details are not sent to the AI
+service.
+
+```kotlin
+client.tryOnWithShopLink(
+    personPng = preparedPersonPng,
+    productPng = selectedRoseVariantPng,
+    category = TryOnCategory.CLOTHING,
+    productDetails = RetailerProductDetails(
+        name = "Linen day dress",
+        url = selectedRoseProductUrl,
+        variant = "Rose",
+    ),
+) { result ->
+    result.onSuccess { preview ->
+        val link = preview.shopLinks.firstOrNull()
+        // Show the generated image and a "Shop this look" link in your app.
+    }
+}
+```
+
+For combinations, use `tryOnFullLookWithShopLinks`. Product images and their
+details are optional; pass details only for pieces included. The returned
+`shopLinks` list contains selected pieces. URLs must use HTTPS. To let a shopper
+compare colors, update the retailer's selected variant image and URL, then call
+the SDK again; the app owns the variant controls and comparison UI.
+
 ## Add the try-on action
 
 1. In your app, let the shopper choose two PNG images and ask for consent.
