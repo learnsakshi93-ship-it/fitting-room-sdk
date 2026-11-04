@@ -1,6 +1,28 @@
 const PRODUCT_CATEGORIES = ['clothing', 'shoes', 'jewelry'];
 const CATEGORIES = new Set([...PRODUCT_CATEGORIES, 'full-look']);
 
+function buildShopLinks(links = {}) {
+  return PRODUCT_CATEGORIES.flatMap((category) => {
+    const item = links[category];
+    if (!item?.url) return [];
+    let parsed;
+    try {
+      parsed = new URL(item.url);
+    } catch {
+      throw new Error(`The ${category} product URL must be a valid HTTPS link.`);
+    }
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) {
+      throw new Error(`The ${category} product URL must be a valid HTTPS link.`);
+    }
+    return [{
+      category,
+      label: item.name || category,
+      url: parsed.toString(),
+      ...(item.variant ? { variant: item.variant } : {}),
+    }];
+  });
+}
+
 export class FittingRoomClient {
   constructor({ endpoint, getAccessToken, fetchImpl = globalThis.fetch } = {}) {
     if (!endpoint || typeof endpoint !== 'string') {
@@ -56,37 +78,58 @@ export class FittingRoomClient {
     if (!body.image || body.category !== category) {
       throw new Error('The try-on service returned an incomplete result.');
     }
-    return body;
+    return { ...body, shopLinks: [] };
   }
 
-  async tryOnFiles({ personFile, productFile, category }) {
+  async tryOnFiles({ personFile, productFile, category, productName, productUrl, variant }) {
     if (category === 'full-look') {
       throw new Error('Use tryOnFullLookFiles for a full look.');
     }
+    const shopLinks = buildShopLinks({
+      [category]: { name: productName, url: productUrl, variant },
+    });
     const [personImage, productImage] = await Promise.all([
       imageFileToPngBase64(personFile),
       imageFileToPngBase64(productFile),
     ]);
-    return this.tryOn({ personImage, productImage, category });
+    const result = await this.tryOn({ personImage, productImage, category });
+    return { ...result, shopLinks };
   }
 
-  async tryOnFullLook({ personImage, clothingImage, shoesImage, jewelryImage }) {
-    return this.tryOn({
+  async tryOnFullLook({
+    personImage, clothingImage, shoesImage, jewelryImage, productDetails = {},
+  }) {
+    const selectedCategories = new Set(Object.entries({
+      clothing: clothingImage,
+      shoes: shoesImage,
+      jewelry: jewelryImage,
+    }).filter(([, image]) => image !== undefined).map(([category]) => category));
+    const selectedDetails = Object.fromEntries(Object.entries(productDetails)
+      .filter(([category]) => selectedCategories.has(category)));
+    const shopLinks = buildShopLinks(selectedDetails);
+    const result = await this.tryOn({
       personImage, category: 'full-look',
       productImages: { clothing: clothingImage, shoes: shoesImage, jewelry: jewelryImage },
     });
+    return { ...result, shopLinks };
   }
 
-  async tryOnFullLookFiles({ personFile, clothingFile, shoesFile, jewelryFile }) {
+  async tryOnFullLookFiles({
+    personFile, clothingFile, shoesFile, jewelryFile, productDetails,
+  }) {
     const entries = Object.entries({ clothingImage: clothingFile, shoesImage: shoesFile, jewelryImage: jewelryFile })
       .filter((entry) => entry[1] !== undefined);
     const [personImage, ...encodedProducts] = await Promise.all([
       imageFileToPngBase64(personFile),
       ...entries.map(([, file]) => imageFileToPngBase64(file)),
     ]);
+    const includedCategories = new Set(entries.map(([key]) => key.replace('Image', '')));
+    const selectedDetails = Object.fromEntries(Object.entries(productDetails ?? {})
+      .filter(([category]) => includedCategories.has(category)));
     return this.tryOnFullLook({
       personImage,
       ...Object.fromEntries(entries.map(([key], index) => [key, encodedProducts[index]])),
+      productDetails: selectedDetails,
     });
   }
 }
