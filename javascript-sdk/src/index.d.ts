@@ -8,6 +8,18 @@ export type FullLookFiles = AtLeastOne<{
   shoesFile: Blob;
   jewelryFile: Blob;
 }>;
+export type RetailerProductDetails = Partial<Record<ProductCategory, {
+  name?: string;
+  url?: string;
+  variant?: string;
+}>>;
+
+export interface RetailerShopLink {
+  category: ProductCategory;
+  label: string;
+  url: string;
+  variant?: string;
+}
 
 export type TryOnRequest = {
   personImage: string;
@@ -25,6 +37,8 @@ export interface TryOnResult {
   image: string;
   category: TryOnCategory;
   disclaimer: string;
+  /** Optional retailer links. Kept in the SDK caller; never sent to the AI service. */
+  shopLinks: RetailerShopLink[];
 }
 
 export interface FittingRoomClientOptions {
@@ -42,12 +56,16 @@ export class FittingRoomClient {
     personFile: Blob;
     productFile: Blob;
     category: ProductCategory;
+    productName?: string;
+    productUrl?: string;
+    variant?: string;
   }): Promise<TryOnResult>;
   tryOnFullLook(request: {
     personImage: string;
-  } & FullLookProducts): Promise<TryOnResult>;
+  } & FullLookProducts & { productDetails?: RetailerProductDetails }): Promise<TryOnResult>;
   tryOnFullLookFiles(request: {
     personFile: Blob;
+    productDetails?: RetailerProductDetails;
   } & FullLookFiles): Promise<TryOnResult>;
 }
 
