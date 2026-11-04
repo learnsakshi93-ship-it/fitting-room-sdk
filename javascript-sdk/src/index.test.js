@@ -132,3 +132,47 @@ test('full look rejects a response for a different category', async () => {
     personImage: 'p', clothingImage: 'c', shoesImage: 's', jewelryImage: 'j',
   }), /incomplete/);
 });
+
+test('retailer product links and variant labels stay client-side', async () => {
+  let payload;
+  const client = new FittingRoomClient({
+    endpoint: '/api/try-on',
+    fetchImpl: async (_url, options) => {
+      payload = JSON.parse(options.body);
+      return { ok: true, json: async () => ({ image: 'preview', category: 'full-look', disclaimer: 'Estimate.' }) };
+    },
+  });
+  const result = await client.tryOnFullLook({
+    personImage: 'person',
+    clothingImage: 'dress',
+    shoesImage: 'shoes',
+    productDetails: {
+      clothing: { name: 'Linen dress', url: 'https://shop.example/dress?color=rose', variant: 'Rose' },
+      jewelry: { name: 'Unselected necklace', url: 'https://shop.example/necklace' },
+    },
+  });
+
+  assert.deepEqual(payload, {
+    personImage: 'person',
+    category: 'full-look',
+    productImages: { clothing: 'dress', shoes: 'shoes' },
+  });
+  assert.deepEqual(result.shopLinks, [{
+    category: 'clothing',
+    label: 'Linen dress',
+    url: 'https://shop.example/dress?color=rose',
+    variant: 'Rose',
+  }]);
+});
+
+test('rejects unsafe product links before calling the try-on endpoint', async () => {
+  const client = new FittingRoomClient({
+    endpoint: '/api/try-on',
+    fetchImpl: () => { throw new Error('The AI service must not be called for an invalid product link.'); },
+  });
+  await assert.rejects(client.tryOnFullLook({
+    personImage: 'person',
+    clothingImage: 'dress',
+    productDetails: { clothing: { url: 'javascript:alert(1)' } },
+  }), /HTTPS link/);
+});
