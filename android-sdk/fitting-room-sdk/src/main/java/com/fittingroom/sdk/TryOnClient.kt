@@ -144,9 +144,9 @@ class TryOnClient(
         callback: (Result<TryOnResult>) -> Unit,
     ) {
         val productDetails = listOf(
-            TryOnCategory.CLOTHING to if (clothingPng != null) clothingDetails else null,
-            TryOnCategory.SHOES to if (shoesPng != null) shoesDetails else null,
-            TryOnCategory.JEWELRY to if (jewelryPng != null) jewelryDetails else null,
+            TryOnCategory.CLOTHING to (if (clothingPng != null) clothingDetails else null),
+            TryOnCategory.SHOES to (if (shoesPng != null) shoesDetails else null),
+            TryOnCategory.JEWELRY to (if (jewelryPng != null) jewelryDetails else null),
         )
         tryOnFullLookInternal(
             personPng, clothingPng, shoesPng, jewelryPng, productDetails, callback,
@@ -259,7 +259,7 @@ class TryOnClient(
         val uri = runCatching { URI(details.url) }.getOrElse {
             throw IllegalArgumentException("The ${category.wireValue} product URL must be a valid HTTPS link.")
         }
-        require(uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank() && uri.rawUserInfo == null) {
+        require(uri.scheme?.equals("https", ignoreCase = true) == true && !uri.host.isNullOrBlank() && uri.rawUserInfo == null) {
             "The ${category.wireValue} product URL must be a valid HTTPS link."
         }
         RetailerShopLink(
