@@ -2,6 +2,26 @@
 
 This Android library adds a retailer-app client for a retailer-owned server route. The route should validate the signed-in shopper and forward the request to the Fitting Room service. Do not ship AI credentials in an Android package.
 
+## Paid retailer setup
+
+Sign in to the Fitting Room website's **Retailer pilot** page, register your
+retailer backend's HTTPS origin, and subscribe through Whop to the
+**INR 199/month** pilot (renewed every 30 days).
+Save the one-time API key in your **backend's** secret store, never in the APK.
+Your backend forwards SDK JSON to
+`POST <FITTING_ROOM_API_ORIGIN>/api/partner/try-on` with
+`Authorization: Bearer <PRIVATE_RETAILER_KEY>`,
+`Content-Type: application/json`, and `Origin: <REGISTERED_HTTPS_ORIGIN>`.
+Native Android requests go through your backend; Android does not supply a
+browser Origin automatically. Your server supplies the registered origin.
+Authenticate shoppers on your backend before forwarding requests.
+
+**Manage billing** opens Whop billing. **Cancel renewal** stops future renewal,
+with access continuing through the paid period. **Rotate API key** immediately
+invalidates the previous key. Handle HTTP 401 (key), 403 (subscription/origin),
+and 429 (retry later). Standalone Fitting Room users have a separate, signed-in
+allowance of 50 successful previews per UTC calendar month.
+
 ## Get the source and add the module
 
 Download or clone the `fitting-room-sdk` repository. In the retailer app's `settings.gradle.kts`, include the SDK module. Adjust the relative path to match where you downloaded the repository:
@@ -49,36 +69,12 @@ selected product images and supports 24 MB JSON requests; keep service credentia
 server-side. Update the SDK dependency and rebuild your Android integration to
 expose this new method. Existing single-category requests remain unchanged.
 
-## Product variants and “Shop this look”
+## Product variants
 
-The retailer owns its catalog and variant picker. For a selected color, pass
-that variant's product image and HTTPS product URL to the SDK. The result
-contains the retailer link locally; product details are not sent to the AI
-service.
-
-```kotlin
-client.tryOnWithShopLink(
-    personPng = preparedPersonPng,
-    productPng = selectedRoseVariantPng,
-    category = TryOnCategory.CLOTHING,
-    productDetails = RetailerProductDetails(
-        name = "Linen day dress",
-        url = selectedRoseProductUrl,
-        variant = "Rose",
-    ),
-) { result ->
-    result.onSuccess { preview ->
-        val link = preview.shopLinks.firstOrNull()
-        // Show the generated image and a "Shop this look" link in your app.
-    }
-}
-```
-
-For combinations, use `tryOnFullLookWithShopLinks`. Product images and their
-details are optional; pass details only for pieces included. The returned
-`shopLinks` list contains selected pieces. URLs must use HTTPS. To let a shopper
-compare colors, update the retailer's selected variant image and URL, then call
-the SDK again; the app owns the variant controls and comparison UI.
+The retailer owns its catalog and variant picker. For a selected color or size,
+pass that variant's product image to the regular `tryOn` or `tryOnFullLook`
+method. The SDK returns the generated preview, category, and disclaimer; keep
+catalog behavior in the retailer app.
 
 ## Add the try-on action
 

@@ -14,6 +14,29 @@ The path above assumes the SDK repository is next to the retailer app. Adjust it
 
 ## Add the try-on action
 
+### Activate retailer access first
+
+1. Open the Fitting Room website's **Retailer pilot** page and sign in.
+2. Enter your retailer website's exact HTTPS origin and subscribe to the
+   **INR 199/month** pilot through Whop checkout (renewed every 30 days).
+3. Copy the private API key shown after activation into your retailer server's
+   secret store. It is shown only once. **Manage billing** opens Whop billing;
+   **Cancel renewal** stops future renewal while retaining paid-period access.
+   **Rotate API key** invalidates the old key immediately.
+4. Your server forwards the SDK payload to
+   `POST <FITTING_ROOM_API_ORIGIN>/api/partner/try-on` with
+   `Authorization: Bearer <PRIVATE_RETAILER_KEY>`,
+   `Content-Type: application/json`, and `Origin: <REGISTERED_RETAILER_ORIGIN>`.
+   The subscription must remain active. Handle 401 (invalid key), 403
+   (inactive subscription or unapproved origin), and 429 (retry later).
+
+Never configure the browser SDK with this private service key. Its access token
+authenticates the shopper to **your** backend, which supplies the private key
+server-side. The Origin header is an additional check, not a replacement for
+the key or your shopper authentication. Standalone shoppers instead sign in to
+Fitting Room and receive 50 successful previews per UTC calendar month; failed
+AI generations do not consume that allowance.
+
 1. Add a photo picker and ask the shopper for consent in your own app.
 2. Create a retailer-owned HTTPS endpoint such as `/api/try-on`. It must authenticate the shopper, validate the request, and call the Fitting Room API from your server.
 3. Create the client and call `tryOnFiles` with the two browser `File` objects and one of `clothing`, `shoes`, or `jewelry`.
@@ -67,44 +90,13 @@ Deploy an updated Fitting Room backend before using this new mode.
 Existing single-category calls are unchanged. Results remain visual estimates,
 not guarantees of fit or exact product details.
 
-## Product variants and “Shop this look”
+## Product variants
 
-Your retailer app owns the product catalog and variant picker. When a shopper
-chooses a color or size, send the matching product image to the SDK; after a
-successful preview, keep the selected SKU's product URL beside the result:
-
-```js
-const result = await client.tryOnFiles({
-  personFile,
-  productFile: selectedVariantImage,
-  category: 'clothing',
-  productName: 'Linen day dress',
-  productUrl: selectedVariantUrl,
-  variant: 'Rose',
-});
-
-setPreview(`data:image/png;base64,${result.image}`);
-setShopLinks(result.shopLinks);
-```
-
-For a full look, pass links only for the selected pieces:
-
-```js
-const result = await client.tryOnFullLookFiles({
-  personFile,
-  clothingFile,
-  shoesFile,
-  productDetails: {
-    clothing: { name: 'Linen dress', url: dressUrl, variant: 'Sage' },
-    shoes: { name: 'Everyday sneaker', url: sneakerUrl, variant: 'White' },
-  },
-});
-```
-
-The SDK returns those links locally as `result.shopLinks`; product metadata is
-not sent to the AI endpoint. Use the returned links for a “Shop this look” row.
-Product URLs must be HTTPS. Product-image uploads and screenshots remain
-supported in the standalone app.
+Your retailer app owns its product catalog and variant picker. When a shopper
+chooses a color or size, send that variant's product image to the SDK. The SDK
+returns the generated image, category, and disclaimer. Keep catalog behavior in
+your retailer app. Product-image uploads and screenshots remain supported in
+the standalone app.
 
 The endpoint accepts JSON fields `personImage`, `productImage`, and `category`. Return JSON with an `image` base64 PNG and the matching `category`; a `disclaimer` can also be included.
 

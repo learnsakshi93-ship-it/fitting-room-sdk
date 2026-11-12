@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.fittingroom"
-version = "0.2.2"
+version = "0.2.3"
 
 android {
     namespace = "com.fittingroom.sdk"
